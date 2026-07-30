@@ -27,7 +27,7 @@ func NewServer() *Tasks {
     
     db, err := sql.Open("postgres", connStr)
     if err != nil {
-        panic(err)
+        log.Fatal(err)
     }
     return &Tasks{db: db}
 }
@@ -149,9 +149,15 @@ func (s *Tasks) del_task(w http.ResponseWriter,r *http.Request){
 
 
 func main() {
+    // Проверка переменной окружения
+    dbURL := os.Getenv("DATABASE_URL")
+    fmt.Println("DATABASE_URL =", dbURL)
+    if dbURL == "" {
+        log.Fatal("DATABASE_URL не найдена")
+    }
+
     server := NewServer()
-    
-    // Создаём таблицу, если её нет
+
     createTableSQL := `
     CREATE TABLE IF NOT EXISTS tasks_list (
         id SERIAL PRIMARY KEY,
@@ -160,12 +166,12 @@ func main() {
         status TEXT DEFAULT 'pending',
         created_at TIMESTAMP DEFAULT NOW()
     );`
-    
+
     _, err := server.db.Exec(createTableSQL)
     if err != nil {
-        panic(err)
+        log.Fatal("Ошибка создания таблицы:", err)
     }
-    fmt.Println("Таблица 'tasks_list' создана/проверена")
+    fmt.Println("Таблица tasks_list проверена/создана")
     
 
     
