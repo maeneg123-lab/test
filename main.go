@@ -17,7 +17,7 @@ type Tasks struct{
     db *sql.DB
 }
 
-func NewServer() *Server {
+func NewServer() *Tasks {
     // Сначала пробуем взять строку из окружения
     connStr := os.Getenv("DATABASE_URL")
     // Если её нет — используем локальную для разработки
@@ -29,7 +29,7 @@ func NewServer() *Server {
     if err != nil {
         panic(err)
     }
-    return &Server{db: db}
+    return &Tasks{db: db}
 }
 
 func (s *Tasks) saveTask(title string, description string, status string) error{
