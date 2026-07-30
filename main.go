@@ -149,40 +149,36 @@ func (s *Tasks) del_task(w http.ResponseWriter,r *http.Request){
 
 
 func main() {
-    connStr := "user=postgres password=36863686 dbname=work_db sslmode=disable"
-    db, err := sql.Open("postgres", connStr)
+    server := NewServer()
+    
+    // Создаём таблицу, если её нет
+    createTableSQL := `
+    CREATE TABLE IF NOT EXISTS tasks_list (
+        id SERIAL PRIMARY KEY,
+        title TEXT NOT NULL,
+        description TEXT,
+        status TEXT DEFAULT 'pending',
+        created_at TIMESTAMP DEFAULT NOW()
+    );`
+    
+    _, err := server.db.Exec(createTableSQL)
     if err != nil {
         panic(err)
     }
-    defer db.Close()
+    fmt.Println("Таблица 'tasks_list' создана/проверена")
+    
 
-    // SQL-запрос для создания таблицы
-    //createTableSQL := `
-    //CREATE TABLE tasks_list (
-    //id SERIAL PRIMARY KEY,
-    //title TEXT NOT NULL,
-    //description TEXT,
-    //status TEXT DEFAULT 'pending',
-    //created_at TIMESTAMP DEFAULT NOW()
-    //);`
-
-    //_, err = db.Exec(createTableSQL)
-    //if err != nil {
-    //    panic(err)
-    //}
-
-    fmt.Println("Таблица 'tasks_list' создана успешно!")
-
-    server := NewServer()
+    
     http.HandleFunc("/get_tasks", server.get_tasks)
     http.HandleFunc("/del_task", server.del_task)
     http.HandleFunc("/get_task", server.get_task)
     http.HandleFunc("/add_task", server.add_task)
     http.HandleFunc("/put_task", server.put_task)
     fmt.Println("Сервер запущен на http://localhost:8080")
+    
     port := os.Getenv("PORT")
     if port == "" {
-        port = "8080" // резервный порт для локальной разработки
+        port = "8080"
     }
     fmt.Println("Сервер запущен на порту", port)
     http.ListenAndServe(":"+port, nil)
