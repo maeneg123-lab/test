@@ -17,13 +17,19 @@ type Tasks struct{
     db *sql.DB
 }
 
-func NewServer() *Tasks {
-    connStr := "user=postgres password=36863686 dbname=work_db sslmode=disable"
+func NewServer() *Server {
+    // Сначала пробуем взять строку из окружения
+    connStr := os.Getenv("DATABASE_URL")
+    // Если её нет — используем локальную для разработки
+    if connStr == "" {
+        connStr = "user=postgres password=36863686 dbname=work_db sslmode=disable"
+    }
+    
     db, err := sql.Open("postgres", connStr)
     if err != nil {
         panic(err)
     }
-    return &Tasks{db: db}
+    return &Server{db: db}
 }
 
 func (s *Tasks) saveTask(title string, description string, status string) error{
