@@ -7,6 +7,7 @@ import (
     "net/http"
     "strconv"
     "time"
+    "os"
 
     _ "github.com/lib/pq"
 )
@@ -173,7 +174,12 @@ func main() {
     http.HandleFunc("/add_task", server.add_task)
     http.HandleFunc("/put_task", server.put_task)
     fmt.Println("Сервер запущен на http://localhost:8080")
-    http.ListenAndServe(":8080", nil)
+    port := os.Getenv("PORT")
+    if port == "" {
+        port = "8080" // резервный порт для локальной разработки
+    }
+    fmt.Println("Сервер запущен на порту", port)
+    http.ListenAndServe(":"+port, nil)
 }
 
 
