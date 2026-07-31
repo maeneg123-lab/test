@@ -39,6 +39,51 @@ func (s *Tasks) saveTask(title string, description string, status string) error{
     return err
 }
 
+func (s *Tasks) search_task(w http.ResponseWriter, r *http.Request){
+    query := r.URL.Query().Get("q")
+    if query == "" {
+        http.Error(w, "Параметр q обязателен", http.StatusBadRequest)
+        return
+    }
+
+    // 2. Делаем поиск в БД (регистронезависимый)
+    rows, err := s.db.Query(`
+        SELECT id, title, description, status, created_at
+        FROM tasks_list
+        WHERE title ILIKE $1 OR description ILIKE $1
+        ORDER BY created_at DESC
+    `, "%"+query+"%")
+    if err != nil {
+        http.Error(w, "Ошибка поиска: "+err.Error(), http.StatusInternalServerError)
+        return
+    }
+    defer rows.Close()
+
+    // 3. Формируем ответ
+    w.Header().Set("Content-Type", "text/plain")
+    fmt.Fprintf(w, "Результаты поиска по запросу '%s':\n\n", query)
+
+    found := false
+    for rows.Next() {
+        var id int
+        var title, description, status string
+        var createdAt time.Time
+
+        err := rows.Scan(&id, &title, &description, &status, &createdAt)
+        if err != nil {
+            continue
+        }
+
+        found = true
+        fmt.Fprintf(w, "ID: %d, Заголовок: %s, Описание: %s, Статус: %s, Создано: %s\n",
+            id, title, description, status, createdAt.Format("2006-01-02 15:04:05"))
+    }
+
+    if !found {
+        fmt.Fprintf(w, "Ничего не найдено по запросу '%s'", query)
+    }
+}
+
 func (s *Tasks) get_tasks(w http.ResponseWriter,r *http.Request){
     rows, err:= s.db.Query(`
         SELECT id,title,description,status,created_at FROM tasks_list
@@ -174,7 +219,7 @@ func main() {
     fmt.Println("Таблица tasks_list проверена/создана")
     
 
-    
+    http.HandleFunc("/search_task", server.search_task)
     http.HandleFunc("/get_tasks", server.get_tasks)
     http.HandleFunc("/del_task", server.del_task)
     http.HandleFunc("/get_task", server.get_task)
