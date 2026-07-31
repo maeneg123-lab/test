@@ -8,6 +8,7 @@ import (
     "strconv"
     "time"
     "os"
+    "log"
 
     _ "github.com/lib/pq"
 )
