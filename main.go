@@ -158,19 +158,19 @@ func main(){
         log.Fatal("DATABASE_URL не найдена")
     }
     server := NewServer()
-    createTableSQL := `
-    CREATE TABLE notes_list (
-    id  SERIAL PRIMARY KEY,
-    title TEXT NOT NULL,
-    description TEXT,
-    status TEXT DEFAULT 'new',
-    created_at TIMESTAMP DEFAULT NOW()
-    );`
-    _, err := server.db.Exec(createTableSQL)
-    if err != nil {
-        log.Fatal("Ошибка создания таблицы:", err)
-    }
-    fmt.Println("Таблица tasks_list проверена/создана")
+    //createTableSQL := `
+    //CREATE TABLE notes_list (
+    //id  SERIAL PRIMARY KEY,
+    //title TEXT NOT NULL,
+    //description TEXT,
+    //status TEXT DEFAULT 'new',
+    //created_at TIMESTAMP DEFAULT NOW()
+    //);`
+    //_, err := server.db.Exec(createTableSQL)
+    //if err != nil {
+        //log.Fatal("Ошибка создания таблицы:", err)
+   // }
+    //fmt.Println("Таблица tasks_list проверена/создана")
 
 
     
