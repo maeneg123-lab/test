@@ -10,15 +10,15 @@ import (
     "os"
     "log"
 
+
     _ "github.com/lib/pq"
 )
 
-
-type Tasks struct{
+type Notes struct{
     db *sql.DB
 }
 
-func NewServer() *Tasks {
+func NewServer() *Notes{
     // Сначала пробуем взять строку из окружения
     connStr := os.Getenv("DATABASE_URL")
     // Если её нет — используем локальную для разработки
@@ -30,211 +30,165 @@ func NewServer() *Tasks {
     if err != nil {
         log.Fatal(err)
     }
-    return &Tasks{db: db}
+    return &Notes{db: db}
+
 }
 
-func (s *Tasks) saveTask(title string, description string, status string) error{
-    _,err:= s.db.Exec(
-        "INSERT INTO tasks_list (title, description, status) VALUES ($1,$2,$3)", title,description,status,
-    )
+func (n *Notes) saveNotes(title string, description string, status string) error{
+    _,err := n.db.Exec("INSERT INTO notes_list (title, description,status) VALUES ($1,$2,$3)", title, description,status,)
     return err
 }
 
-func (s *Tasks) search_task(w http.ResponseWriter, r *http.Request){
-    query := r.URL.Query().Get("q")
-    if query == "" {
-        http.Error(w, "Параметр q обязателен", http.StatusBadRequest)
-        return
-    }
-
-    // 2. Делаем поиск в БД (регистронезависимый)
-    rows, err := s.db.Query(`
-        SELECT id, title, description, status, created_at
-        FROM tasks_list
-        WHERE title ILIKE $1 OR description ILIKE $1
-        ORDER BY created_at DESC
-    `, "%"+query+"%")
-    if err != nil {
-        http.Error(w, "Ошибка поиска: "+err.Error(), http.StatusInternalServerError)
-        return
-    }
-    defer rows.Close()
-
-    // 3. Формируем ответ
-    w.Header().Set("Content-Type", "text/plain")
-    fmt.Fprintf(w, "Результаты поиска по запросу '%s':\n\n", query)
-
-    found := false
-    for rows.Next() {
-        var id int
-        var title, description, status string
-        var createdAt time.Time
-
-        err := rows.Scan(&id, &title, &description, &status, &createdAt)
-        if err != nil {
-            continue
-        }
-
-        found = true
-        fmt.Fprintf(w, "ID: %d, Заголовок: %s, Описание: %s, Статус: %s, Создано: %s\n",
-            id, title, description, status, createdAt.Format("2006-01-02 15:04:05"))
-    }
-
-    if !found {
-        fmt.Fprintf(w, "Ничего не найдено по запросу '%s'", query)
-    }
-}
-
-func (s *Tasks) get_tasks(w http.ResponseWriter,r *http.Request){
-    rows, err:= s.db.Query(`
-        SELECT id,title,description,status,created_at FROM tasks_list
-    `)
-    if err!=nil{
-        fmt.Fprintf(w, "error: %v", err)
-        return
-    }
-    fmt.Fprintf(w, "tasks list\n\n")
-    for rows.Next(){
-        var id int
-        var title string
-        var description string
-        var status string
-        var created_at time.Time
-
-        err:=rows.Scan(&id,&title,&description,&status,&created_at)
-        if err!=nil{continue}
-        fmt.Fprintf(w, "id: %d, title: %v, description: %v, status: %v, created_at: %v\n", id,title,description,status,created_at.Format("2006-01-02 15:04:05"))
-    }
-}
-
-func (s *Tasks) get_task(w http.ResponseWriter,r *http.Request){
-    idstr := r.URL.Query().Get("id")
-
-    id, err:= strconv.ParseInt(idstr, 10, 64)
-    if err!=nil{return}
-    rows, err:= s.db.Query(`
-        SELECT id,title,description,status,created_at FROM tasks_list WHERE id=$1;
-    `, id)
-    if err!=nil{
-        fmt.Fprintf(w, "error: %v", err)
-        return
-    }
-    fmt.Fprintf(w, "task: %d\n\n", id)
-    for rows.Next(){
-        var id int
-        var title string
-        var description string
-        var status string
-        var created_at time.Time
-
-        err:=rows.Scan(&id,&title,&description,&status,&created_at)
-        if err!=nil{continue}
-        fmt.Fprintf(w, "id: %d, title: %v, description: %v, status: %v, created_at: %v\n", id,title,description,status,created_at.Format("2006-01-02 15:04:05"))
-    }
-}
-
-func (s *Tasks) add_task(w http.ResponseWriter,r *http.Request){
+func (n *Notes) new_note(w http.ResponseWriter,r *http.Request){
     value := r.URL.Query()
+    title:=value.Get("title")
+    description:=value.Get("description")
+    status:=value.Get("status")
 
-    title := value.Get("title")
-    description:= value.Get("description")
-    status := value.Get("status")
-
-    err := s.saveTask(title, description, status)
-    if err!= nil{
+    err := n.saveNotes(title, description, status)
+    if err!=nil{
         fmt.Fprintf(w, "error: %v", err)
+        return
     }
-
     fmt.Fprintf(w, "success!")
 }
 
-func (s *Tasks) put_task(w http.ResponseWriter, r *http.Request){
-    value := r.URL.Query()
-
-    idstr := value.Get("id")
-
-    id, err := strconv.ParseInt(idstr, 10, 64)
-    if err != nil{
+func (n *Notes) get_notes(w http.ResponseWriter, r *http.Request){
+    rows,err:=n.db.Query(`SELECT id,title,description,status,created_at FROM notes_list;`)
+    if err!=nil{
         fmt.Fprintf(w, "error: %v", err)
         return
     }
-    status := value.Get("status")
+    fmt.Fprintf(w,"notes list:\n")
+    for rows.Next(){
+    var id int
+        var title string
+        var description string
+        var status string
+        var created_at time.Time
 
-    _, err = s.db.Query(`
-        UPDATE tasks_list SET status = $1 WHERE id=$2;
-    `, status, id)
+        err=rows.Scan(&id,&title,&description,&status,&created_at)
 
+        fmt.Fprintf(w, "id: %d, title: %v, description: %v, status: %v, created_at: %v\n", id,title,description,status,created_at.Format("2006-04-24 12:11:00"))
+    }
+}
+
+func (n *Notes) get_note(w http.ResponseWriter, r *http.Request){
+    idstr := r.URL.Query().Get("id")
+    id,err:= strconv.ParseInt(idstr, 10,64)
+
+    rows,err:=n.db.Query(`SELECT id,title,description,status,created_at FROM notes_list WHERE id=$1;`, id,)
+    if err!=nil{
+        fmt.Fprintf(w, "error: %v", err)
+        return
+    }
+    fmt.Fprintf(w,"note: %d\n", id)
+    for rows.Next(){
+    var id int
+        var title string
+        var description string
+        var status string
+        var created_at time.Time
+
+        err=rows.Scan(&id,&title,&description,&status,&created_at)
+
+        fmt.Fprintf(w, "id: %d, title: %v, description: %v, status: %v, created_at: %v\n", id,title,description,status,created_at.Format("2006-04-24 12:11:00"))
+    }
+}
+
+func (n *Notes) del_note(w http.ResponseWriter, r *http.Request){
+    idstr := r.URL.Query().Get("id")
+    id,err:=strconv.ParseInt(idstr, 10,64)
     if err!=nil{
         fmt.Fprintf(w, "error: %v", err)
         return
     }
 
-    fmt.Fprintf(w, "success: %v", id)
+    _, err= n.db.Query(`DELETE FROM notes_list WHERE id=$1;`, id,)
+
+    if err!= nil{
+        fmt.Fprintf(w, "error: %v", err)
+        return
+    }
+
+    fmt.Fprintf(w, "success! deleted note: %d", id)
 }
 
-func (s *Tasks) del_task(w http.ResponseWriter,r *http.Request){
-    value := r.URL.Query()
+func (n *Notes) search_note(w http.ResponseWriter, r *http.Request){
+    q := r.URL.Query().Get("q")
 
-    idstr := value.Get("id")
-
-    id,err := strconv.ParseInt(idstr, 10, 64)
-    if err!=nil{return}
-
-    _,err = s.db.Query(`
-        DELETE FROM tasks_list WHERE id=$1;
-    `, id)
+    rows, err:=n.db.Query(`SELECT id,title FROM notes_list WHERE title ILIKE $1 OR description ILIKE $1`, "%"+q+"%")
 
     if err!=nil{
         fmt.Fprintf(w, "error: %v", err)
         return
     }
+    fmt.Fprintf(w, "result search for %v", q)
+    for rows.Next(){
+        var id int
+        var title string
 
-    fmt.Fprintf(w, "success")
+        err:=rows.Scan(&id, &title)
+        if err!=nil{
+            fmt.Fprintf(w, "error: ", err)
+            return
+        }
+        fmt.Fprintf(w, "id: %d, title: %v", id, title)
+    }
 }
 
+func (n *Notes) put_note(w http.ResponseWriter,r *http.Request){
+    status := r.URL.Query().Get("status")
+    idstr :=  r.URL.Query().Get("id")
+    id, err:= strconv.ParseInt(idstr, 10,64)
 
+    _, err= n.db.Query(`UPDATE notes_list SET status=$1 WHERE id=$2`, status, id)
+    if err!=nil{
+        fmt.Fprintf(w, "error: %v", err)
+        return
+    }
+    fmt.Fprintf(w, "success! id: %d, status: %v", id, status)
+}
 
-func main() {
-    // Проверка переменной окружения
+func main(){
+     // Проверка переменной окружения
     dbURL := os.Getenv("DATABASE_URL")
     fmt.Println("DATABASE_URL =", dbURL)
     if dbURL == "" {
         log.Fatal("DATABASE_URL не найдена")
     }
-
     server := NewServer()
-
     createTableSQL := `
-    CREATE TABLE IF NOT EXISTS tasks_list (
-        id SERIAL PRIMARY KEY,
-        title TEXT NOT NULL,
-        description TEXT,
-        status TEXT DEFAULT 'pending',
-        created_at TIMESTAMP DEFAULT NOW()
+    CREATE TABLE notes_list (
+    id  SERIAL PRIMARY KEY,
+    title TEXT NOT NULL,
+    description TEXT,
+    status TEXT DEFAULT 'new',
+    created_at TIMESTAMP DEFAULT NOW()
     );`
-
     _, err := server.db.Exec(createTableSQL)
     if err != nil {
         log.Fatal("Ошибка создания таблицы:", err)
     }
     fmt.Println("Таблица tasks_list проверена/создана")
+
+
     
 
-    http.HandleFunc("/search_task", server.search_task)
-    http.HandleFunc("/get_tasks", server.get_tasks)
-    http.HandleFunc("/del_task", server.del_task)
-    http.HandleFunc("/get_task", server.get_task)
-    http.HandleFunc("/add_task", server.add_task)
-    http.HandleFunc("/put_task", server.put_task)
-    fmt.Println("Сервер запущен на http://localhost:8080")
-    
-    port := os.Getenv("PORT")
+    http.HandleFunc("/notes", server.get_notes)
+    http.HandleFunc("/search", server.search_note)
+    http.HandleFunc("/note", server.get_note)
+    http.HandleFunc("/new_note", server.new_note)
+    http.HandleFunc("/put_note", server.put_note)
+    http.HandleFunc("/del_note", server.del_note)
+    fmt.Println("сервер запусщен на http://localhost:8080")
+     port := os.Getenv("PORT")
     if port == "" {
         port = "8080"
     }
     fmt.Println("Сервер запущен на порту", port)
     http.ListenAndServe(":"+port, nil)
-}
 
+}
 
 
