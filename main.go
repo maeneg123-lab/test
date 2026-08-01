@@ -69,7 +69,7 @@ func (n *Notes) get_notes(w http.ResponseWriter, r *http.Request){
 
         err=rows.Scan(&id,&title,&description,&status,&created_at)
 
-        fmt.Fprintf(w, "id: %d, title: %v, description: %v, status: %v, created_at: %v\n", id,title,description,status,created_at.Format("2006-04-24 12:11:00"))
+        fmt.Fprintf(w, "id: %d, title: %v, description: %v, status: %v, created_at: %v\n", id,title,description,status,created_at.Format("2006-01-02 15:04:05"))
     }
 }
 
@@ -92,7 +92,7 @@ func (n *Notes) get_note(w http.ResponseWriter, r *http.Request){
 
         err=rows.Scan(&id,&title,&description,&status,&created_at)
 
-        fmt.Fprintf(w, "id: %d, title: %v, description: %v, status: %v, created_at: %v\n", id,title,description,status,created_at.Format("2006-04-24 12:11:00"))
+        fmt.Fprintf(w, "id: %d, title: %v, description: %v, status: %v, created_at: %v\n", id,title,description,status,created_at.Format("2006-01-02 15:04:05"))
     }
 }
 
@@ -130,7 +130,7 @@ func (n *Notes) search_note(w http.ResponseWriter, r *http.Request){
 
         err:=rows.Scan(&id, &title)
         if err!=nil{
-            fmt.Fprintf(w, "error: ", err)
+            fmt.Fprintf(w, "error: %v", err)
             return
         }
         fmt.Fprintf(w, "id: %d, title: %v", id, title)
