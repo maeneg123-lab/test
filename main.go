@@ -327,14 +327,14 @@ func main(){
     fmt.Println("Таблица tasks_list проверена/создана")
 
 
-    updateBook := `
-    ALTER TABLE notes_list ADD COLUMN user_id INT REFERENCES users(id);`
+    //updateBook := `
+    //ALTER TABLE notes_list ADD COLUMN user_id INT REFERENCES users(id);`
 
-    _, err = server.db.Exec(updateBook)
-    if err!=nil{
-        log.Fatal("ошибка обновления таблицы: ", err)
-    }
-    fmt.Println("таблица обновлена")
+    //_, err = server.db.Exec(updateBook)
+    //if err!=nil{
+        //log.Fatal("ошибка обновления таблицы: ", err)
+    //}
+    //fmt.Println("таблица обновлена")
     
     http.HandleFunc("/register", server.register)  // без middleware
     http.HandleFunc("/login", server.login)        // без middleware
